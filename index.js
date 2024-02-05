@@ -1,7 +1,8 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-
+var jwt = require('jsonwebtoken');
+require("dotenv").config();
 // middle ware
 app.use(cors({ origin: ["http://localhost:3000"], }));
 app.use(express.json());
@@ -27,6 +28,21 @@ async function run() {
     const productsCollection = client.db("bucketBD").collection("products");
     const userCollection = client.db("bucketBD").collection("users");
     const orderCollection = client.db("bucketBD").collection("orders");
+
+    const verifyToken = (req, res, next) => {
+      const token = req.headers.authorization;
+      if (!token) {
+        return res.status(401).send({ message: "Not authorized" });
+      }
+      jwt.verify(token, 'ahmedJwtSecret1', (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "Unauthorized" });
+        }
+        // if token valid it would be decoded
+        req.user = decoded;
+        next();
+      });
+    };
     
     app.get('/products', async(req, res)=> {
         const result = await productsCollection.find().toArray();
@@ -44,10 +60,40 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/users/profile', verifyToken, async(req,res)=>{
+      const userProfile = req?.user;
+      if(userProfile){
+        res.send({success:true, data: userProfile})
+      }else{
+        res.send({success:false, data:null,message:"profile not found"})
+      }
+    });
+
+
     app.post('/users/register', async(req, res)=> {
-      const body = req.body;
-      const result = await userCollection.insertOne(body);
-      res.send(result);
+     try{
+       const {number,name, password, isAdmin} = req.body;
+       const userExist = await userCollection.findOne({number});
+       if(userExist){
+        res.send({success: false, data:null, error:'User already exist with this number'});
+       }else{
+        const hashedPassWord = '';
+      const data = { number, password:hashedPassWord, isAdmin};
+      const result = await userCollection.insertOne(data);
+      if(result){
+        const accessToken = jwt.sign({number,name,isAdmin},"ahmedJwtSecret1", {
+          expiresIn: "1h",
+        });
+        const userInfo = {success: true, data, token:accessToken, message:'User registered successfully'}
+        res.send(userInfo);
+         }else{
+          res.send({success: false, data:null, error:'Failed to registered'})
+         }
+       }
+      }
+      catch(error){
+         throw new Error(error)
+     }
     });
     app.post('/orders', async(req, res)=> {
       const body = req.body;
@@ -72,12 +118,6 @@ async function run() {
         res.send(result);
     });
     
-    // app.get("/search-course/:name", async (req, res) => {
-    //   const name = req.params.name;
-    //   const query = { name: { $regex: new RegExp(name, "i") } }; // Case-insensitive search
-    //   const result = await courseCollection.find(query).toArray();
-    //   res.send(result);
-    // });
 
     const isValidBangladeshiNumber = (mobileNumber) => {
       const result = { isValid: false, message: "" };
@@ -144,12 +184,6 @@ async function run() {
     //   }else{
     //     res.status(422).send({success:false,message:isValidNumber.message, data:isValidNumber})
     //   }
-    // });
-
-
-    // app.get('/students', async(req,res)=> {
-    //   const result = await enrolledStudentCollection.find().toArray();
-    //   res.send(result);
     // });
 
 
