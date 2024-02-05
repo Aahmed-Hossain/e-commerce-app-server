@@ -170,23 +170,6 @@ async function run() {
       return result;
     };
     
-    // app.post('/users/register', async(req,res )=> {
-    //   const {number, password} = req.body;
-    //   // const isValidNumber = isValidBangladeshiNumber(number);
-    //   if(isValidNumber.isValid){
-    //     // check user avaiale is already?
-    //     // bcrypt password 
-    //     // insert 
-    //     // genetate jwt token 
-    //     const result = await userCollection.insertOne(body);
-    //   res.send(result);
-    //   res.status(200).send({success:ture,message:"user registered successfully", data:result, token:"token"})
-    //   }else{
-    //     res.status(422).send({success:false,message:isValidNumber.message, data:isValidNumber})
-    //   }
-    // });
-
-
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
